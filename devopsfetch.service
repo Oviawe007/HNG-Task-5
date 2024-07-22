@@ -2,9 +2,10 @@
 Description=DevOps Fetch Continuous Monitoring Service
 
 [Service]
-ExecStart=/usr/bin/python3 ./devopsfetch_service.py
+ExecStart=/home/ubuntu/devopsfetch_env/bin/python /home/ubuntu/devopsfetch_service.py
 Restart=always
-User=root
+User=your_username
 
 [Install]
 WantedBy=multi-user.target
+
