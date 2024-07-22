@@ -142,8 +142,16 @@ EOF
 # Make the script executable
 chmod +x /opt/devopsfetch/devopsfetch.sh
 
+
+# Create a symbolic link to the devopsfetch.sh script
+if [ -L /usr/local/bin/devopsfetch ]; then
+    echo "Symbolic link /usr/local/bin/devopsfetch already exists. Removing it."
+    sudo rm /usr/local/bin/devopsfetch
+fi
+
 # Create a symlink to make the script accessible system-wide
 ln -s /opt/devopsfetch/devopsfetch.sh /usr/local/bin/devopsfetch
+
 
 # Create systemd service file
 cat << EOF > /etc/systemd/system/devopsfetch.service
