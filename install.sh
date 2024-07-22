@@ -1,20 +1,27 @@
 #!/bin/bash
 
-# Install Python dependencies
-pip3 install -r requirements.txt
+# Create virtual environment
+python3 -m venv ~/devopsfetch_env
+
+# Activate virtual environment and install dependencies
+source ~/devopsfetch_env/bin/activate
+pip install -r requirements.txt
+
+# Deactivate virtual environment
+deactivate
 
 # Copy the systemd service file
-cp devopsfetch.service /etc/systemd/system/
+sudo cp devopsfetch.service /etc/systemd/system/devopsfetch.service
 
 # Reload systemd to recognize the new service
-systemctl daemon-reload
+sudo systemctl daemon-reload
 
 # Enable and start the service
-systemctl enable devopsfetch.service
-systemctl start devopsfetch.service
+sudo systemctl enable devopsfetch.service
+sudo systemctl start devopsfetch.service
 
 # Set up log rotation
-cat <<EOF >/etc/logrotate.d/devopsfetch
+sudo bash -c 'cat <<EOF >/etc/logrotate.d/devopsfetch
 /var/log/devopsfetch.log {
     daily
     rotate 7
@@ -26,6 +33,6 @@ cat <<EOF >/etc/logrotate.d/devopsfetch
         systemctl reload devopsfetch.service > /dev/null 2>/dev/null || true
     endscript
 }
-EOF
+EOF'
 
 echo "Installation completed successfully."
