@@ -103,12 +103,12 @@ case "$1" in
         ;;
     -h|--help)
         echo "Usage: devopsfetch [OPTION]"
-        echo "  -p, --port [PORT]     get all active ports or info about a specific port"
         echo "  -d, --docker [NAME]   get all Docker containers or info about a specific container"
-        echo "  -n, --nginx [DOMAIN]  get all Nginx domains or info about a specific domain"
-        echo "  -u, --users [USER]    get all user logins or info about a specific user"
-        echo "  -t, --time START END  get activities within a time range"
         echo "  -h, --help            get this help message"
+        echo "  -n, --nginx [DOMAIN]  get all Nginx domains or info about a specific domain"
+        echo "  -p, --port [PORT]     get all active ports or info about a specific port"
+        echo "  -t, --time START END  get activities within a time range"
+        echo "  -u, --users [USER]    get all user logins or info about a specific user"
         ;;
     *)
         echo "Invalid option. Use -h or --help for usage information."
