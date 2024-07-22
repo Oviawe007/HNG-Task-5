@@ -1,10 +1,11 @@
 [Unit]
-Description=DevOps Fetch Continuous Monitoring Service
+Description=DevOpsFetch Monitoring Service
+After=network.target
 
 [Service]
-ExecStart=/home/ubuntu/devopsfetch_env/bin/python /home/ubuntu/devopsfetch_service.py
+ExecStart=/path/to/devopsfetch.sh -t "$(date -d '1 hour ago' +'%Y-%m-%d %H:%M:%S')" "$(date +'%Y-%m-%d %H:%M:%S')"
 Restart=always
-User=ubuntu
+User=root
 
 [Install]
 WantedBy=multi-user.target
