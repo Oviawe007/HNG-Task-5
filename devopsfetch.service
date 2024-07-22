@@ -1,0 +1,10 @@
+[Unit]
+Description=DevOps Fetch Continuous Monitoring Service
+
+[Service]
+ExecStart=/usr/bin/python3 /path/to/devopsfetch_service.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
