@@ -1,6 +1,6 @@
 # HNG-Task-5
 
-@channel Devops MID INTERNSHIP TASK. 
+MID INTERNSHIP TASK. 
 Building devopsfetch for Server Information Retrieval and Monitoring
 
 Objective: Develop a tool for devops named devopsfetch that collects and displays system information, including active ports, user logins, Nginx configurations, Docker images, and container statuses. Implement a systemd service to monitor and log these activities continuously.
