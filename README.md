@@ -36,6 +36,4 @@ Help and Documentation:
   - Usage examples for each command-line flag.
   - The logging mechanism and how to retrieve logs.
 
-Submission Details:
-- Submission Link: https://forms.gle/45yS2UYeVk5XsKP26
-- Deadline: Wednesday, 24th July 2024, by 11:59 PM GMT.
+Follow this [link](https://dev.to/efosa-dev/provision-authentication-and-configuration-on-aws-using-ansible-31bp) for implementation guide and usage.
