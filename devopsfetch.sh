@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Function to display port info
+# Function to get port info
 get_port_info() {
     port=$1
     process=$(lsof -i :$port -sTCP:LISTEN -t)
@@ -11,56 +11,55 @@ get_port_info() {
     fi
 }
 
-# Function to display Docker info
+# Function to get Docker info
 get_docker_info() {
     echo "Docker Containers:"
     docker ps -a --format "table {{.Image}}\t{{.Names}}\t{{.Status}}"
 }
 
-# Function to display container info
+# Function to get container info
 get_container_info() {
     container=$1
-    docker inspect $container | jq '.[0] | {Name: .Name, Image: .Config.Image, Status: .State.Status, Created: .Created, Ports: .NetworkSettings.Ports}'
+    docker inspect $container | jq '.[0] | {Name: .Name, Image: .Config.Image, Status: .State.Status, Created: .Created, Ports: .NetworkSettings.Pports}' | jq -r 'to_entries | map("\(.key)\t\(.value)") | .[]'
 }
 
-# Function to display active ports
+# Function to get active ports
 get_active_ports() {
-    echo "Active Ports:"
+    echo -e "Port\tProcess"
     ss -tuln | awk 'NR>1 {print $5}' | cut -d':' -f2 | sort -n | uniq | while read port; do
         process=$(lsof -i :$port -sTCP:LISTEN -t)
         if [ ! -z "$process" ]; then
-            echo "Port $port: $(ps -p $process -o comm=)"
+            echo -e "$port\t$(ps -p $process -o comm=)"
         fi
-    done
+    done | column -t
 }
 
-
-# Function to display Nginx info
+# Function to get Nginx info
 get_nginx_info() {
-    echo "Nginx Domains and Ports:"
-    nginx -T 2>/dev/null | grep -E "server_name|listen" | sed 'N;s/\n/ /' | sed 's/server_name //g; s/listen //g; s/;//g'
+    echo -e "Domain\tPort"
+    nginx -T 2>/dev/null | grep -E "server_name|listen" | sed 'N;s/\n/ /' | sed 's/server_name //g; s/listen //g; s/;//g' | column -t
 }
 
-# Function to display Nginx domain info
+# Function to get Nginx domain info
 get_nginx_domain_info() {
     domain=$1
     nginx -T 2>/dev/null | awk -v domain="$domain" '/server {/,/}/ {if ($0 ~ domain) {p=1}; if (p) print; if ($0 ~ /}/) p=0}'
 }
 
-# Function to display user logins
+# Function to get user logins
 get_user_logins() {
-    echo "User Logins:"
-    last -n 20 | awk '!/wtmp/ {print $1, $4, $5, $6, $7}'
+    echo -e "User\tLogin Time"
+    last -n 20 | awk '!/wtmp/ {print $1, $4, $5, $6, $7}' | column -t
 }
 
-# Function to display user info
+# Function to get user info
 get_user_info() {
     user=$1
     id $user
     last -n 1 $user
 }
 
-# Function to display activities in time range
+# Function to get activities in time range
 get_activities_in_time_range() {
     start_time=$1
     end_time=$2
@@ -103,12 +102,12 @@ case "$1" in
         ;;
     -h|--help)
         echo "Usage: devopsfetch [OPTION]"
-        echo "  -d, --docker [NAME]   get all Docker containers or info about a specific container"
-        echo "  -h, --help            get this help message"
-        echo "  -n, --nginx [DOMAIN]  get all Nginx domains or info about a specific domain"
-        echo "  -p, --port [PORT]     get all active ports or info about a specific port"
-        echo "  -t, --time START END  get activities within a time range"
-        echo "  -u, --users [USER]    get all user logins or info about a specific user"
+        echo "  -d, --docker [NAME]   Get all Docker containers or info about a specific container"
+        echo "  -h, --help            Get this help message"
+        echo "  -n, --nginx [DOMAIN]  Get all Nginx domains or info about a specific domain"
+        echo "  -p, --port [PORT]     Get all active ports or info about a specific port"
+        echo "  -t, --time START END  Get activities within a time range"
+        echo "  -u, --users [USER]    Get all user logins or info about a specific user"
         ;;
     *)
         echo "Invalid option. Use -h or --help for usage information."
