@@ -1,3 +1,5 @@
+#!/home/ubuntu/devopsfetch_env/bin/python
+
 import time
 import logging
 from devopsfetch import list_ports, list_docker, list_nginx, list_users
