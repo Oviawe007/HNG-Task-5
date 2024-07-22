@@ -165,6 +165,21 @@ systemctl daemon-reload
 systemctl enable devopsfetch.service
 systemctl start devopsfetch.service
 
-echo "DevOpsFetch has been installed successfully!"
+# Set up log rotation
+cat <<EOT | sudo tee /etc/logrotate.d/devopsfetch
+/var/log/syslog {
+    rotate 7
+    daily
+    compress
+    missingok
+    notifempty
+    delaycompress
+    postrotate
+    systemctl restart rsyslog
+    endscript
+}
+EOT
+
+echo "Setup completed. DevOpsFetch service is now running and logs are managed."
 echo "You can now use it by running 'devopsfetch' followed by the appropriate flags."
 echo "The monitoring service has also been set up and started."
