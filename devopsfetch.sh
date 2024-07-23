@@ -2,13 +2,17 @@
 
 # Function to get port info
 get_port_info() {
-    port=$1
-    process=$(lsof -i :$port -sTCP:LISTEN -t)
-    if [ ! -z "$process" ]; then
-        echo "Port $port is used by $(ps -p $process -o comm=) (PID: $process)"
-    else
-        echo "No process found listening on port $port"
-    fi
+  port=$1
+  # Use process substitution to capture lsof output and check for non-empty result
+  process=$(lsof -i :$port -sTCP:LISTEN -t 2>/dev/null)
+  if [ ! -z "$process" ]; then
+    # Extract PID and process name from the captured lsof output
+    pid=$(echo "$process" | awk '{print $2}')
+    process_name=$(echo "$process" | awk '{print $9}')
+    echo "Port $port is used by $process_name (PID: $pid)"
+  else
+    echo "No process found listening on port $port"
+  fi
 }
 
 # Function to get Docker info
