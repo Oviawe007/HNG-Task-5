@@ -36,4 +36,4 @@ Help and Documentation:
   - Usage examples for each command-line flag.
   - The logging mechanism and how to retrieve logs.
 
-Follow this [link](https://dev.to/efosa-dev/provision-authentication-and-configuration-on-aws-using-ansible-31bp) for implementation guide and usage.
+Follow this [link](https://dev.to/efosa-dev/mid-internship-task-building-devopsfetch-for-server-information-retrieval-and-monitoring-2bj2) for implementation guide and usage.
