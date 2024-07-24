@@ -1,18 +1,17 @@
 
 # devopsfetch.service
-
 [Unit]
-Description=DevOpsFetch Service
+Description=DevOps Fetch Service
 After=network.target
 
 [Service]
-ExecStart=/home/ubuntu/HNG-Task-5/devopsfetch.sh -d all
-User=ubuntu  
+Type=simple
+ExecStart=/home/ubuntu/HNG-Task-5/devopsfetch.sh -t now now
 WorkingDirectory=/home/ubuntu/HNG-Task-5
-Restart=always
-StandardOutput=syslog
-StandardError=syslog
-SyslogIdentifier=devopsfetch
+StandardOutput=append:/var/log/devopsfetch.log
+StandardError=append:/var/log/devopsfetch.log
+Restart=on-failure
+RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
