@@ -35,4 +35,6 @@ sudo touch /var/log/devopsfetch.log
 sudo chown root:root /var/log/devopsfetch.log
 sudo chmod 644 /var/log/devopsfetch.log
 
-echo "DevOpsFetch has been installed and the service has been started."
+echo "Setup completed. DevOpsFetch service is now running and logs are managed."
+echo "You can now use it by running 'sudo ./devopsfetch' followed by the appropriate flags."
+echo "The monitoring service has also been set up and started."
