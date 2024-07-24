@@ -148,6 +148,4 @@ while true; do
     # Sleep for a specified interval before running again (e.g., 60 seconds)
     sleep 60
 done
-echo "Setup completed. DevOpsFetch service is now running and logs are managed."
-echo "You can now use it by running 'devopsfetch' followed by the appropriate flags."
-echo "The monitoring service has also been set up and started."
+
