@@ -8,7 +8,6 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-
 LOG_FILE="/var/log/devopsfetch.log"
 
 # Create log file if it doesn't exist
@@ -42,10 +41,10 @@ get_ports() {
         # Display all ports and services
         log "Displaying all ports and services:"
         if command -v netstat > /dev/null; then
-            sudo netstat -tuln | sudo tee -a "$LOG_FILE"
+            sudo netstat -tuln | awk 'NR==1{print "Proto Recv-Q Send-Q Local Address Foreign Address State"} NR>1{print}' | column -t | sudo tee -a "$LOG_FILE"
         else
             log "netstat command not found, trying ss instead"
-            sudo ss -tuln | sudo tee -a "$LOG_FILE"
+            sudo ss -tuln | awk 'NR==1{print "Proto Recv-Q Send-Q Local Address Foreign Address State"} NR>1{print}' | column -t | sudo tee -a "$LOG_FILE"
         fi
     else
         # Display ports filtered by specific port number
@@ -71,19 +70,17 @@ get_ports() {
     fi
 }
 
-
 get_docker() {
     log "Fetching Docker information for: $1"
     if [ -z "$1" ]; then
-        docker ps -a | sudo tee -a "$LOG_FILE"
+        docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Names}}\t{{.Status}}" | sudo tee -a "$LOG_FILE"
     else
-        docker inspect "$1" | sudo tee -a "$LOG_FILE"
+        docker inspect "$1" | jq '.[] | {Name: .Name, Image: .Config.Image, Status: .State.Status, Created: .Created, Ports: .NetworkSettings.Ports}' | sudo tee -a "$LOG_FILE"
     fi
 }
 
 get_nginx_info() {
     domain=$1
-
     if [[ -z $domain ]]; then
         # Display all Nginx domains and their ports in a tabular format
         {
@@ -94,7 +91,7 @@ get_nginx_info() {
             column -t
         } | sudo tee -a "$LOG_FILE"
     else
- # Provide detailed configuration information for a specific domain
+        # Provide detailed configuration information for a specific domain
         {
             echo "Detailed configuration for domain: $domain"
             sudo grep -A 20 "server_name $domain" /etc/nginx/sites-available/* /etc/nginx/nginx.conf
@@ -105,9 +102,9 @@ get_nginx_info() {
 get_users() {
     log "Fetching user information for: $1"
     if [ -z "$1" ]; then
-        lastlog | sudo tee -a "$LOG_FILE"
+        lastlog | column -t | sudo tee -a "$LOG_FILE"
     else
-        lastlog | grep "$1" | sudo tee -a "$LOG_FILE"
+        lastlog | grep "$1" | column -t | sudo tee -a "$LOG_FILE"
     fi
 }
 
@@ -120,32 +117,35 @@ while true; do
     case "$1" in
         -p|--port)
             get_ports "$2"
+            shift 2
             ;;
         -d|--docker)
             get_docker "$2"
+            shift 2
             ;;
         -n|--nginx)
-            get_nginx_info $2
+            get_nginx_info "$2"
+            shift 2
             ;;
         -u|--users)
             get_users "$2"
+            shift 2
             ;;
         -t|--time)
             get_time_range "$2" "$3"
+            shift 3
             ;;
         -h|--help)
-	      display_help
+            display_help
             exit 0
             ;;
         *)
             log "Invalid option provided: $1"
-        echo "Invalid option. Use -h or --help for usage information."
-        exit 1
-        ;;
-      
+            echo "Invalid option. Use -h or --help for usage information."
+            exit 1
+            ;;
     esac
 
     # Sleep for a specified interval before running again (e.g., 60 seconds)
     sleep 60
 done
-
