@@ -1,120 +1,153 @@
 #!/bin/bash
 
-# Function to get port info
-get_port_info() {
-  port=$1
-  # Use process substitution to capture lsof output and check for non-empty result
-  process=$(lsof -i :$port -sTCP:LISTEN -t 2>/dev/null)
-  if [ ! -z "$process" ]; then
-    # Extract PID and process name from the captured lsof output
-    pid=$(echo "$process" | awk '{print $2}')
-    process_name=$(echo "$process" | awk '{print $9}')
-    echo "Port $port is used by $process_name (PID: $pid)"
-  else
-    echo "No process found listening on port $port"
-  fi
+# install.sh
+
+# Check if script is run as root
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
+
+LOG_FILE="/var/log/devopsfetch.log"
+
+# Create log file if it doesn't exist
+if [ ! -f "$LOG_FILE" ]; then
+    sudo touch "$LOG_FILE"
+    sudo chmod 666 "$LOG_FILE"
+fi
+
+log() {
+    echo "$(date +'%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE" > /dev/null
 }
 
-# Function to get Docker info
-get_docker_info() {
-    echo "Docker Containers:"
-    docker ps -a --format "table {{.Image}}\t{{.Names}}\t{{.Status}}"
+display_help() {
+    log "Displaying help information"
+    echo "Usage: devopsfetch [option] [argument]"
+    echo
+    echo "   -p, --port [port_number]      Display active ports"
+    echo "   -d, --docker [container_name] Display Docker information"
+    echo "   -n, --nginx [domain]          Display Nginx information"
+    echo "   -u, --users [username]        Display user information"
+    echo "   -t, --time [start] [end]      Display activities within time range"
+    echo "   -h, --help                    Display help"
+    echo
 }
 
-# Function to get container info
-get_container_info() {
-    container=$1
-    docker inspect $container | jq '.[0] | {Name: .Name, Image: .Config.Image, Status: .State.Status, Created: .Created, Ports: .NetworkSettings.Pports}' | jq -r 'to_entries | map("\(.key)\t\(.value)") | .[]'
-}
-
-# Function to get active ports
-get_active_ports() {
-    echo -e "Port\tProcess"
-    ss -tuln | awk 'NR>1 {print $5}' | cut -d':' -f2 | sort -n | uniq | while read port; do
-        process=$(lsof -i :$port -sTCP:LISTEN -t)
-        if [ ! -z "$process" ]; then
-            echo -e "$port\t$(ps -p $process -o comm=)"
+get_ports() {
+    local port=$1
+    log "Fetching ports with argument: $port"
+    
+    if [ -z "$port" ]; then
+        # Display all ports and services
+        log "Displaying all ports and services:"
+        if command -v netstat > /dev/null; then
+            sudo netstat -tuln | sudo tee -a "$LOG_FILE"
+        else
+            log "netstat command not found, trying ss instead"
+            sudo ss -tuln | sudo tee -a "$LOG_FILE"
         fi
-    done | column -t
+    else
+        # Display ports filtered by specific port number
+        log "Displaying ports filtered by specific port number: $port"
+        if command -v netstat > /dev/null; then
+            port_info=$(sudo netstat -tuln | grep ":$port")
+            if [ -z "$port_info" ]; then
+                log "Port $port is not available."
+                echo "Port $port is not available." | sudo tee -a "$LOG_FILE"
+            else
+                echo "$port_info" | awk 'NR==1{print "Proto Recv-Q Send-Q Local Address Foreign Address State"} {print}' | column -t | sudo tee -a "$LOG_FILE"
+            fi
+        else
+            log "netstat command not found, trying ss instead"
+            port_info=$(sudo ss -tuln | grep ":$port")
+            if [ -z "$port_info" ]; then
+                log "Port $port is not available."
+                echo "Port $port is not available." | sudo tee -a "$LOG_FILE"
+            else
+                echo "$port_info" | awk 'NR==1{print "Proto Recv-Q Send-Q Local Address Foreign Address State"} {print}' | column -t | sudo tee -a "$LOG_FILE"
+            fi
+        fi
+    fi
 }
 
-# Function to get Nginx info
+
+get_docker() {
+    log "Fetching Docker information for: $1"
+    if [ -z "$1" ]; then
+        docker ps -a | sudo tee -a "$LOG_FILE"
+    else
+        docker inspect "$1" | sudo tee -a "$LOG_FILE"
+    fi
+}
+
 get_nginx_info() {
-    echo -e "Domain\tPort"
-    nginx -T 2>/dev/null | grep -E "server_name|listen" | sed 'N;s/\n/ /' | sed 's/server_name //g; s/listen //g; s/;//g' | column -t
-}
-
-# Function to get Nginx domain info
-get_nginx_domain_info() {
     domain=$1
-    nginx -T 2>/dev/null | awk -v domain="$domain" '/server {/,/}/ {if ($0 ~ domain) {p=1}; if (p) print; if ($0 ~ /}/) p=0}'
+
+    if [[ -z $domain ]]; then
+        # Display all Nginx domains and their ports in a tabular format
+        {
+            echo -e "Domain\tPort"
+            nginx -T 2>/dev/null | grep -E "server_name|listen" | \
+            sed 'N;s/\n/ /' | \
+            sed 's/server_name //g; s/listen //g; s/;//g' | \
+            column -t
+        } | sudo tee -a "$LOG_FILE"
+    else
+ # Provide detailed configuration information for a specific domain
+        {
+            echo "Detailed configuration for domain: $domain"
+            sudo grep -A 20 "server_name $domain" /etc/nginx/sites-available/* /etc/nginx/nginx.conf
+        } | sudo tee -a "$LOG_FILE"
+    fi
 }
 
-# Function to get user logins
-get_user_logins() {
-    echo -e "User\tLogin Time"
-    last -n 20 | awk '!/wtmp/ {print $1, $4, $5, $6, $7}' | column -t
+get_users() {
+    log "Fetching user information for: $1"
+    if [ -z "$1" ]; then
+        lastlog | sudo tee -a "$LOG_FILE"
+    else
+        lastlog | grep "$1" | sudo tee -a "$LOG_FILE"
+    fi
 }
 
-# Function to get user info
-get_user_info() {
-    user=$1
-    id $user
-    last -n 1 $user
+get_time_range() {
+    log "Fetching logs from $1 to $2"
+    journalctl --since="$1" --until="$2" | sudo tee -a "$LOG_FILE"
 }
 
-# Function to get activities in time range
-get_activities_in_time_range() {
-    start_time=$1
-    end_time=$2
-    echo "Activities between $start_time and $end_time:"
-    journalctl --since "$start_time" --until "$end_time"
-}
-
-# Main execution
-case "$1" in
-    -p|--port)
-        if [ -z "$2" ]; then
-            get_active_ports
-        else
-            get_port_info $2
-        fi
-        ;;
-    -d|--docker)
-        if [ "$2" = "all" ]; then
-            get_docker_info
-        else
-            get_container_info $2
-        fi
-        ;;
-    -n|--nginx)
-        if [ "$2" = "all" ]; then
-            get_nginx_info
-        else
-            get_nginx_domain_info $2
-        fi
-        ;;
-    -u|--users)
-        if [ "$2" = "all" ]; then
-            get_user_logins
-        else
-            get_user_info $2
-        fi
-        ;;
-    -t|--time)
-        get_activities_in_time_range "$2" "$3"
-        ;;
-    -h|--help)
-        echo "Usage: devopsfetch [OPTION]"
-        echo "  -d, --docker [NAME]   Get all Docker containers or info about a specific container"
-        echo "  -h, --help            Get this help message"
-        echo "  -n, --nginx [DOMAIN]  Get all Nginx domains or info about a specific domain"
-        echo "  -p, --port [PORT]     Get all active ports or info about a specific port"
-        echo "  -t, --time START END  Get activities within a time range"
-        echo "  -u, --users [USER]    Get all user logins or info about a specific user"
-        ;;
-    *)
+while true; do
+    case "$1" in
+        -p|--port)
+            get_ports "$2"
+            ;;
+        -d|--docker)
+            get_docker "$2"
+            ;;
+        -n|--nginx)
+            get_nginx_info $2
+            ;;
+        -u|--users)
+            get_users "$2"
+            ;;
+        -t|--time)
+            get_time_range "$2" "$3"
+            ;;
+        -h|--help)
+	      display_help
+            exit 0
+            ;;
+        *)
+            log "Invalid option provided: $1"
         echo "Invalid option. Use -h or --help for usage information."
         exit 1
         ;;
-esac
+      
+    esac
+
+    # Sleep for a specified interval before running again (e.g., 60 seconds)
+    sleep 60
+done
+echo "Setup completed. DevOpsFetch service is now running and logs are managed."
+echo "You can now use it by running 'devopsfetch' followed by the appropriate flags."
+echo "The monitoring service has also been set up and started."
